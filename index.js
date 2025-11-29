@@ -26,49 +26,33 @@ const allowedOrigins = [
 // Log allowed origins for debugging
 console.log('🌐 Allowed CORS origins:', allowedOrigins.length > 0 ? allowedOrigins : 'All origins (development mode)');
 
+// CORS configuration
 const corsOptions = {
-    origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, Postman, curl, etc.)
-        if (!origin) {
-            return callback(null, true);
-        }
-        
-        // In development, allow all origins
-        if (process.env.NODE_ENV !== 'production') {
-            return callback(null, true);
-        }
-        
-        // In production, check against allowed origins
-        if (allowedOrigins.length === 0) {
-            // If no FRONTEND_URL is set, allow all (not recommended for production)
-            console.warn('⚠️  WARNING: No FRONTEND_URL set. Allowing all origins.');
-            return callback(null, true);
-        }
-        
-        // Check if origin is in allowed list
-        const isAllowed = allowedOrigins.some(allowedOrigin => {
-            // Support wildcard or exact match
-            if (allowedOrigin === '*' || allowedOrigin === origin) {
-                return true;
-            }
-            // Support subdomain matching
-            if (origin.endsWith(allowedOrigin.replace(/^https?:\/\//, ''))) {
-                return true;
-            }
-            return false;
-        });
-        
-        if (isAllowed) {
+    origin: (origin, callback) => {
+        const isDev = process.env.NODE_ENV !== 'production';
+
+        // Allow Postman, mobile apps, or internal requests
+        if (!origin) return callback(null, true);
+
+        const allowedOrigins = [
+            process.env.FRONTEND_URL,
+            'http://localhost:3000',
+            'http://localhost:5173'
+        ].filter(Boolean);
+
+        // Development: allow all
+        if (isDev) return callback(null, true);
+
+        // Production: allow only whitelisted
+        if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
-            console.error(`❌ CORS blocked origin: ${origin}`);
-            callback(new Error(`Not allowed by CORS. Origin: ${origin}`));
+            console.error(`❌ CORS BLOCKED: ${origin}`);
+            callback(new Error(`CORS blocked: ${origin}`));
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 };
 
 // Middleware
